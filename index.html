@@ -29,13 +29,13 @@
   <header class="topbar">
     <h1>Malhas Acabadas</h1>
     <div class="topbar-actions">
-      <button id="btnNova" class="btn primary">+ Nova</button>
+      <button id="btnNova" class="btn primary">+ Nova encomenda</button>
       <button id="btnSair" class="btn ghost" title="Terminar sessão">Sair</button>
     </div>
   </header>
 
   <div class="toolbar">
-    <input id="pesquisa" type="search" placeholder="Pesquisar referência, cliente, artigo, cor…">
+    <input id="pesquisa" type="search" placeholder="Pesquisar n.º encomenda, ref. cliente, cliente, artigo, cor…">
     <label class="chk"><input type="checkbox" id="soAtrasadas"> Só atrasadas</label>
   </div>
 
@@ -43,18 +43,70 @@
   <main id="lista" class="lista"></main>
 </section>
 
-<!-- DETALHE / EDIÇÃO -->
+<!-- ENCOMENDA (cabeçalho + artigos + guias) -->
 <dialog id="modal">
-  <form id="form" method="dialog">
+  <form id="formEnc" method="dialog">
     <div class="modal-head">
       <h2 id="modalTitulo">Encomenda</h2>
       <button type="button" class="btn ghost" id="btnFechar">✕</button>
     </div>
+    <div class="grid">
+      <label>N.º Encomenda * <input name="numero" required></label>
+      <label>Ref. Cliente <input name="ref_cliente"></label>
+      <label>Cliente * <input name="cliente" required></label>
+    </div>
+    <label>Notas <textarea name="notas" rows="2"></textarea></label>
+    <p id="formErro" class="erro"></p>
+    <div class="modal-foot">
+      <button type="button" class="btn danger" id="btnApagar">Apagar encomenda</button>
+      <button type="submit" class="btn primary" id="btnGuardar">Guardar</button>
+    </div>
+  </form>
+
+  <!-- ARTIGOS -->
+  <section id="artBox" class="guias">
+    <div class="modal-head">
+      <h3>Artigos da encomenda</h3>
+      <button type="button" class="btn primary small" id="btnNovoArt">+ Adicionar artigo</button>
+    </div>
+    <div id="artLista"></div>
+  </section>
+
+  <!-- GUIAS -->
+  <section id="guiasBox" class="guias">
+    <h3>Guias de transporte / remessa</h3>
+    <div id="guiasLista"></div>
+    <form id="guiaForm" class="guia-form">
+      <select name="artigo_id" title="Artigo a que se refere"></select>
+      <select name="tipo">
+        <option value="transporte">Guia de transporte</option>
+        <option value="remessa">Guia de remessa</option>
+      </select>
+      <select name="destino">
+        <option value="tinturaria">→ Tinturaria</option>
+        <option value="estamparia">→ Estamparia</option>
+        <option value="cliente">→ Cliente</option>
+        <option value="outro">→ Outro</option>
+      </select>
+      <input name="numero" placeholder="Nº da guia *" required>
+      <input name="data" type="date" required>
+      <input name="quantidade_kg" type="number" step="0.01" min="0" placeholder="kg">
+      <input name="notas" placeholder="Notas">
+      <button class="btn primary" type="submit">+ Adicionar guia</button>
+    </form>
+  </section>
+</dialog>
+
+<!-- ARTIGO -->
+<dialog id="modalArt">
+  <form id="formArt" method="dialog">
+    <div class="modal-head">
+      <h2 id="artTitulo">Artigo</h2>
+      <button type="button" class="btn ghost" id="btnFecharArt">✕</button>
+    </div>
 
     <div class="grid">
-      <label>Referência * <input name="referencia" required></label>
-      <label>Cliente * <input name="cliente" required></label>
-      <label>Artigo (malha) * <input name="artigo" required></label>
+      <label>Artigo (malha) * <input name="descricao" required></label>
       <label>Cor <input name="cor"></label>
       <label>Quantidade (kg) <input name="quantidade_kg" type="number" step="0.01" min="0"></label>
       <label>Data pedida pelo cliente <input name="data_pedida_cliente" type="date"></label>
@@ -93,7 +145,7 @@
 
     <fieldset class="fs estamparia">
       <legend>3 · Estamparia (opcional)</legend>
-      <label class="chk"><input type="checkbox" name="tem_estamparia"> Esta encomenda tem estamparia</label>
+      <label class="chk"><input type="checkbox" name="tem_estamparia"> Este artigo tem estamparia</label>
       <div class="grid" id="boxEstamparia">
         <label>Estamparia <input name="estamparia"></label>
       </div>
@@ -107,36 +159,12 @@
     </fieldset>
 
     <label>Notas <textarea name="notas" rows="2"></textarea></label>
-
-    <p id="formErro" class="erro"></p>
+    <p id="artErro" class="erro"></p>
     <div class="modal-foot">
-      <button type="button" class="btn danger" id="btnApagar">Apagar</button>
-      <button type="submit" class="btn primary" id="btnGuardar">Guardar</button>
+      <button type="button" class="btn danger" id="btnApagarArt">Apagar artigo</button>
+      <button type="submit" class="btn primary" id="btnGuardarArt">Guardar artigo</button>
     </div>
   </form>
-
-  <!-- GUIAS -->
-  <section id="guiasBox" class="guias">
-    <h3>Guias de transporte / remessa</h3>
-    <div id="guiasLista"></div>
-    <form id="guiaForm" class="guia-form">
-      <select name="tipo">
-        <option value="transporte">Guia de transporte</option>
-        <option value="remessa">Guia de remessa</option>
-      </select>
-      <select name="destino">
-        <option value="tinturaria">→ Tinturaria</option>
-        <option value="estamparia">→ Estamparia</option>
-        <option value="cliente">→ Cliente</option>
-        <option value="outro">→ Outro</option>
-      </select>
-      <input name="numero" placeholder="Nº da guia *" required>
-      <input name="data" type="date" required>
-      <input name="quantidade_kg" type="number" step="0.01" min="0" placeholder="kg">
-      <input name="notas" placeholder="Notas">
-      <button class="btn primary" type="submit">+ Adicionar guia</button>
-    </form>
-  </section>
 </dialog>
 
 <div id="toast" class="toast hidden"></div>

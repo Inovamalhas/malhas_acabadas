@@ -4,9 +4,11 @@ App web simples (HTML + JavaScript) com base de dados e login no **Supabase**, a
 Funciona no browser do PC e do telemóvel e pode ser instalada no ecrã inicial (PWA).
 
 ## O que faz
-- Encomendas com 4 etapas coloridas: **1 Produção da malha (azul)** → **2 Tinturaria (roxo)** → **3 Estamparia (laranja, opcional)** → **4 Entrega ao cliente (verde)** → Concluída (cinza).
+- Cada encomenda tem **N.º Encomenda, Ref. Cliente e Cliente** e pode ter **vários artigos**. Cada artigo tem as suas etapas, locais (malharia, tinturaria, estamparia) e datas.
+- O cartão da encomenda mostra, sem abrir nada, a **posição de cada artigo** (etapa, local e datas). Tocar num artigo abre-o para editar; tocar no cabeçalho abre a encomenda.
+- Etapas coloridas: **1 Produção da malha (azul)** → **2 Tinturaria (roxo)** → **3 Estamparia (laranja, opcional)** → **4 Entrega ao cliente (verde)** → Concluída (cinza).
 - Produção **interna** ou **subcontratada** (com nome do subcontratado).
-- Datas previstas: fim da malha, envio para a tinturaria, entrega ao cliente. Ficam a **vermelho** quando passam do prazo.
+- Datas (todas editáveis): pedida pelo cliente, fim da malha, envio para a tinturaria, entrega ao cliente. Ficam a **vermelho** quando passam do prazo.
 - Guias de transporte e de remessa por encomenda (nº, data, destino, kg, notas).
 - Pesquisa, filtro por etapa e filtro "só atrasadas". Botão "Avançar etapa".
 - Só utilizadores com login acedem aos dados (Supabase Auth + RLS).
@@ -26,11 +28,14 @@ Funciona no browser do PC e do telemóvel e pode ser instalada no ecrã inicial 
    - **anon / public key** (ou *publishable key*)
 7. Abrir o ficheiro `config.js` e substituir os dois valores. (A chave *anon* é pública por desenho; quem protege os dados é o login + as regras RLS do `schema.sql`. **Nunca** usar a chave `service_role` aqui.)
 
+### Já tinha instalado a versão anterior?
+Não corra o `schema.sql`. Corra apenas `migracao_v2.sql` (uma vez) no SQL Editor: converte as encomendas existentes (cada uma fica com 1 artigo; o antigo "referência" passa a N.º Encomenda).
+
 ## PARTE 2 – GitHub (código + alojamento gratuito)
 
 1. Criar conta em https://github.com se ainda não tiver.
 2. **New repository** (botão + no canto superior direito): nome `malhas-acabadas`, **Public** (o GitHub Pages gratuito exige repositório público; os dados continuam protegidos pelo login), Create repository.
-3. **Carregar os ficheiros**: na página do repositório → **Add file → Upload files** → arrastar todos os ficheiros desta pasta (`index.html`, `styles.css`, `app.js`, `config.js`, `manifest.json`, `sw.js`, `icon.svg`, `schema.sql`, `README.md`) → **Commit changes**.
+3. **Carregar os ficheiros**: na página do repositório → **Add file → Upload files** → arrastar todos os ficheiros desta pasta (`index.html`, `styles.css`, `app.js`, `config.js`, `manifest.json`, `sw.js`, `icon.svg`, `schema.sql`, `migracao_v2.sql`, `README.md`) → **Commit changes**.
    *(Alternativa com git: `git init`, `git add .`, `git commit -m "app malhas"`, `git branch -M main`, `git remote add origin https://github.com/SEU-UTILIZADOR/malhas-acabadas.git`, `git push -u origin main`.)*
 4. **Publicar**: **Settings → Pages** → em *Build and deployment* escolher **Deploy from a branch**, branch **main**, pasta **/ (root)** → Save.
 5. Ao fim de 1–2 minutos o endereço aparece no topo da página, no formato `https://SEU-UTILIZADOR.github.io/malhas-acabadas/`.
