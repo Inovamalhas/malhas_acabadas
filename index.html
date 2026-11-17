@@ -7,7 +7,7 @@
   <title>Malhas Acabadas</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -15,6 +15,7 @@
 <!-- LOGIN -->
 <section id="login" class="login hidden">
   <form id="loginForm" class="login-box">
+    <img src="icon.svg" alt="" class="logo-login">
     <h1>Malhas Acabadas</h1>
     <p class="muted">Acesso reservado a utilizadores</p>
     <label>Email <input type="email" id="loginEmail" required autocomplete="username"></label>
@@ -27,9 +28,9 @@
 <!-- APP -->
 <section id="app" class="hidden">
   <header class="topbar">
-    <h1>Malhas Acabadas</h1>
+    <h1><img src="icon.svg" alt="" class="logo-topo">Malhas Acabadas</h1>
     <div class="topbar-actions">
-      <button id="btnNova" class="btn primary">+ Nova encomenda</button>
+      <button id="btnNova" class="btn primary">+ Nova<span class="so-pc"> encomenda</span></button>
       <button id="btnBackup" class="btn ghost" title="Cópia de segurança">💾</button>
       <button id="btnSair" class="btn ghost" title="Terminar sessão">Sair</button>
     </div>

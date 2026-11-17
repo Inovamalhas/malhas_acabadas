@@ -42,7 +42,7 @@ Não corra o `schema.sql`. Corra apenas `migracao_v2.sql` (uma vez) no SQL Edito
 
 1. Criar conta em https://github.com se ainda não tiver.
 2. **New repository** (botão + no canto superior direito): nome `malhas-acabadas`, **Public** (o GitHub Pages gratuito exige repositório público; os dados continuam protegidos pelo login), Create repository.
-3. **Carregar os ficheiros**: na página do repositório → **Add file → Upload files** → arrastar todos os ficheiros desta pasta (`index.html`, `styles.css`, `app.js`, `config.js`, `manifest.json`, `sw.js`, `icon.svg`, `schema.sql`, `migracao_v2.sql`, `migracao_v3.sql`, `README.md`) → **Commit changes**.
+3. **Carregar os ficheiros**: na página do repositório → **Add file → Upload files** → arrastar todos os ficheiros desta pasta (`index.html`, `styles.css`, `app.js`, `config.js`, `manifest.json`, `sw.js`, `icon.svg`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`, `schema.sql`, `migracao_v2.sql`, `migracao_v3.sql`, `README.md`) → **Commit changes**.
    *(Alternativa com git: `git init`, `git add .`, `git commit -m "app malhas"`, `git branch -M main`, `git remote add origin https://github.com/SEU-UTILIZADOR/malhas-acabadas.git`, `git push -u origin main`.)*
 4. **Publicar**: **Settings → Pages** → em *Build and deployment* escolher **Deploy from a branch**, branch **main**, pasta **/ (root)** → Save.
 5. Ao fim de 1–2 minutos o endereço aparece no topo da página, no formato `https://SEU-UTILIZADOR.github.io/malhas-acabadas/`.

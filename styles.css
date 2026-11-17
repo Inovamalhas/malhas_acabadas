@@ -130,3 +130,20 @@ dialog#modalArt{width:min(760px,96vw)}
 .bk h3{margin:0}
 dialog#modalBackup{width:min(520px,96vw)}
 .passos{grid-template-columns:repeat(3,1fr)}
+
+/* logo */
+.logo-topo{height:30px;width:30px;vertical-align:middle;margin-right:.5rem;border-radius:8px}
+.topbar h1{display:flex;align-items:center}
+.logo-login{width:84px;height:84px;margin:0 auto;display:block}
+.login-box h1,.login-box>.muted{text-align:center}
+@media(max-width:600px){
+  .so-pc{display:none}
+  .topbar{padding:.5rem .7rem}
+  .topbar h1{font-size:1rem;white-space:nowrap}
+  .logo-topo{height:28px;width:28px;margin-right:.4rem}
+  .topbar .btn{padding:.5rem .7rem}
+  .toolbar{gap:.5rem;padding:.6rem .6rem}
+  .toolbar input[type=search]{flex:1 1 100%}
+  .toolbar select{flex:1 1 44%;min-width:0;max-width:none}
+  .tabs{padding:0 .6rem .6rem}
+}
