@@ -121,3 +121,12 @@ dialog#modalArt{width:min(760px,96vw)}
   .card .art .rodape{margin-top:.3rem}
   .card .art .rodape .btn{padding:.25rem .55rem;font-size:12.5px}
 }
+
+/* ===== v3: filtros e cópias ===== */
+.toolbar select{width:auto;min-width:150px;flex:0 1 auto}
+.bk{display:grid;gap:.6rem}
+.bk .btn{text-align:left}
+.bk hr{border:0;border-top:1px dashed var(--borda);width:100%;margin:.2rem 0}
+.bk h3{margin:0}
+dialog#modalBackup{width:min(520px,96vw)}
+.passos{grid-template-columns:repeat(3,1fr)}

@@ -30,12 +30,19 @@
     <h1>Malhas Acabadas</h1>
     <div class="topbar-actions">
       <button id="btnNova" class="btn primary">+ Nova encomenda</button>
+      <button id="btnBackup" class="btn ghost" title="Cópia de segurança">💾</button>
       <button id="btnSair" class="btn ghost" title="Terminar sessão">Sair</button>
     </div>
   </header>
 
   <div class="toolbar">
     <input id="pesquisa" type="search" placeholder="Pesquisar n.º encomenda, ref. cliente, cliente, artigo, cor…">
+    <select id="filtroCliente" title="Filtrar por cliente"><option value="">Todos os clientes</option></select>
+    <select id="ordem" title="Ordenar">
+      <option value="num_desc">N.º encomenda ↓ (mais recente)</option>
+      <option value="num_asc">N.º encomenda ↑ (mais antiga)</option>
+      <option value="pedida">Data pedida (mais próxima)</option>
+    </select>
     <label class="chk"><input type="checkbox" id="soAtrasadas"> Só atrasadas</label>
   </div>
 
@@ -140,6 +147,7 @@
       <div class="grid">
         <label>Tinturaria <input name="tinturaria"></label>
         <label>Previsão envio p/ tinturaria <input name="data_prev_envio_tinturaria" type="date"></label>
+        <label>Previsão receção da tinturaria <input name="data_prev_rececao_tinturaria" type="date"></label>
       </div>
     </fieldset>
 
@@ -148,6 +156,7 @@
       <label class="chk"><input type="checkbox" name="tem_estamparia"> Este artigo tem estamparia</label>
       <div class="grid" id="boxEstamparia">
         <label>Estamparia <input name="estamparia"></label>
+        <label>Previsão receção da estamparia <input name="data_prev_rececao_estamparia" type="date"></label>
       </div>
     </fieldset>
 
@@ -165,6 +174,24 @@
       <button type="submit" class="btn primary" id="btnGuardarArt">Guardar artigo</button>
     </div>
   </form>
+</dialog>
+
+<!-- CÓPIAS DE SEGURANÇA -->
+<dialog id="modalBackup">
+  <div class="modal-head">
+    <h2>Cópia de segurança</h2>
+    <button type="button" class="btn ghost" id="btnFecharBackup">✕</button>
+  </div>
+  <div class="bk">
+    <p class="muted">Guarde regularmente uma cópia (sugestão: 1 vez por semana) num sítio seguro fora do Supabase.</p>
+    <button class="btn primary" id="btnExportJson">⬇ Descarregar cópia completa (.json)</button>
+    <button class="btn" id="btnExportCsv">⬇ Exportar para Excel (.csv)</button>
+    <hr>
+    <h3>Repor a partir de uma cópia (.json)</h3>
+    <label class="chk"><input type="checkbox" id="restSubstituir"> Apagar primeiro tudo o que existe (repor exatamente o estado da cópia)</label>
+    <p class="muted">Sem esta opção, os registos da cópia são repostos/atualizados e os restantes mantêm-se.</p>
+    <input type="file" id="ficheiroRestaurar" accept=".json,application/json">
+  </div>
 </dialog>
 
 <div id="toast" class="toast hidden"></div>

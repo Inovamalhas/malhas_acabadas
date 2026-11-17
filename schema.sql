@@ -37,6 +37,8 @@ create table if not exists public.artigos (
   data_pedida_cliente         date,   -- data que o cliente quer a malha
   data_prev_fim_malha         date,   -- previsão fim da produção da malha
   data_prev_envio_tinturaria  date,   -- previsão envio para a tinturaria
+  data_prev_rececao_tinturaria date,  -- previsão receção da tinturaria (regresso)
+  data_prev_rececao_estamparia date,  -- previsão receção da estamparia (regresso)
   data_prev_entrega_cliente   date,   -- previsão entrega ao cliente
 
   notas                       text,
@@ -103,3 +105,10 @@ create policy "guias_autenticados" on public.guias
   for all to authenticated using (true) with check (true);
 
 -- (utilizadores anónimos não têm nenhuma policy => não veem nada)
+
+-- (garante as colunas de receção mesmo que a tabela já existisse)
+alter table public.artigos add column if not exists data_prev_rececao_tinturaria date;
+alter table public.artigos add column if not exists data_prev_rececao_estamparia date;
+
+-- pede ao Supabase para atualizar o que conhece da base de dados
+notify pgrst, 'reload schema';

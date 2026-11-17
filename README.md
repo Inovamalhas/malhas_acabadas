@@ -15,6 +15,13 @@ Funciona no browser do PC e do telemóvel e pode ser instalada no ecrã inicial 
 
 ---
 
+## Novidades da v3
+- Lista ordenada por **N.º de encomenda** (ordem numérica; pode alternar ↓/↑ ou ordenar pela data pedida) e **filtro por cliente**.
+- Datas de **receção da tinturaria** e **receção da estamparia** (regresso do material), além do envio para a tinturaria.
+- **Estado automático:** ao lançar uma guia com destino tinturaria ou estamparia, o artigo (ou todos, se escolher "Toda a encomenda") passa a essa etapa. Só avança, nunca recua. A alteração manual continua possível.
+- Botão 💾 (topo): **cópia de segurança** (.json), exportação para Excel (.csv) e **reposição** a partir de uma cópia.
+- Se já tinha a v2 instalada: corra só `migracao_v3.sql` no SQL Editor (não apaga dados).
+
 ## PARTE 1 – Supabase (base de dados + utilizadores)
 
 1. Ir a https://supabase.com → **Start your project** → entrar (pode ser com a conta GitHub).
@@ -35,7 +42,7 @@ Não corra o `schema.sql`. Corra apenas `migracao_v2.sql` (uma vez) no SQL Edito
 
 1. Criar conta em https://github.com se ainda não tiver.
 2. **New repository** (botão + no canto superior direito): nome `malhas-acabadas`, **Public** (o GitHub Pages gratuito exige repositório público; os dados continuam protegidos pelo login), Create repository.
-3. **Carregar os ficheiros**: na página do repositório → **Add file → Upload files** → arrastar todos os ficheiros desta pasta (`index.html`, `styles.css`, `app.js`, `config.js`, `manifest.json`, `sw.js`, `icon.svg`, `schema.sql`, `migracao_v2.sql`, `README.md`) → **Commit changes**.
+3. **Carregar os ficheiros**: na página do repositório → **Add file → Upload files** → arrastar todos os ficheiros desta pasta (`index.html`, `styles.css`, `app.js`, `config.js`, `manifest.json`, `sw.js`, `icon.svg`, `schema.sql`, `migracao_v2.sql`, `migracao_v3.sql`, `README.md`) → **Commit changes**.
    *(Alternativa com git: `git init`, `git add .`, `git commit -m "app malhas"`, `git branch -M main`, `git remote add origin https://github.com/SEU-UTILIZADOR/malhas-acabadas.git`, `git push -u origin main`.)*
 4. **Publicar**: **Settings → Pages** → em *Build and deployment* escolher **Deploy from a branch**, branch **main**, pasta **/ (root)** → Save.
 5. Ao fim de 1–2 minutos o endereço aparece no topo da página, no formato `https://SEU-UTILIZADOR.github.io/malhas-acabadas/`.
@@ -52,4 +59,4 @@ Para mudar algo na app, editar o ficheiro no GitHub (lápis ✏️ → Commit). 
 ## Notas
 - Projetos gratuitos do Supabase ficam em pausa após cerca de 1 semana sem utilização; é só retomar no painel. Para uso diário não é problema.
 - Neste momento qualquer utilizador com login vê e edita todas as encomendas. Se quiserem que o comercial só **veja** (sem editar), ou só veja as suas encomendas, ajusta-se nas regras (policies) do `schema.sql`.
-- Faça cópias de segurança periódicas: **Table Editor → Export to CSV**.
+- Cópias de segurança: use o botão 💾 da app (sugestão: semanalmente) e guarde o ficheiro .json fora do Supabase. O plano gratuito do Supabase não inclui cópias automáticas descarregáveis.
