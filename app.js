@@ -84,8 +84,7 @@ const encComAtraso = (e) => e.artigos.some(artComAtraso);
 function desenhar() {
   const arts = (e) => e.artigos;
   const ativa = (e) => !arts(e).length || arts(e).some((a) => a.estado !== "concluida");
-  const concluida = (e) => arts(e).length > 0 && arts(e).every((a) => a.estado === "concluida");
-  const naEtapa = (s) => (e) => s === "concluida" ? concluida(e) : arts(e).some((a) => a.estado === s);
+  const naEtapa = (s) => (e) => arts(e).some((a) => a.estado === s); // inclui "concluida"
   // filtro por cliente (a lista de clientes é construída a partir das encomendas)
   const selCli = $("#filtroCliente"), cliAtual = selCli.value;
   const clientes = [...new Set(encomendas.map((e) => e.cliente))].sort((a, b) => a.localeCompare(b, "pt"));
@@ -96,6 +95,7 @@ function desenhar() {
 
   const tabs = [
     { id: "ativas", nome: "Ativas", cor: "#374151", f: ativa },
+    { id: "todas", nome: "Todas", cor: "#374151", f: () => true },
     ...ETAPAS.map((s) => ({ id: s, nome: NOMES[s], cor: CORES[s], f: naEtapa(s) }))
   ];
   $("#tabs").innerHTML = tabs.map((t) =>
@@ -158,7 +158,10 @@ function blocoArtigo(a) {
       ${a.tem_estamparia ? passo(a, "Receção estamp.", "data_prev_rececao_estamparia", "var(--estamparia)") : ""}
       ${passo(a, "Entrega", "data_prev_entrega_cliente", "var(--entrega)")}
     </div>
-    ${a.estado !== "concluida" ? `<div class="rodape"><button class="btn small" data-avancar="${a.id}">Avançar etapa →</button></div>` : ""}
+    <div class="rodape">
+      ${a.estado !== "producao" ? `<button class="btn small" data-recuar="${a.id}">${a.estado === "concluida" ? "↩ Reabrir" : "← Recuar"}</button>` : ""}
+      ${a.estado !== "concluida" ? `<button class="btn small" data-avancar="${a.id}">Avançar etapa →</button>` : ""}
+    </div>
   </div>`;
 }
 
@@ -166,8 +169,11 @@ function cartao(e) {
   // resumo: quantos artigos em cada etapa
   const chips = ETAPAS.map((s) => {
     const n = e.artigos.filter((a) => a.estado === s).length;
-    return n ? `<span class="chip" style="--c:${CORES[s]}">${n} ${NOMES[s].replace(/^\d · /, "")}</span>` : "";
+    return n ? `<button type="button" class="chip ${filtro === s ? "ativo" : ""}" data-filtro="${s}" style="--c:${CORES[s]}" title="Mostrar só artigos nesta etapa">${n} ${NOMES[s].replace(/^\d · /, "")}</button>` : "";
   }).join("");
+  // com um filtro de etapa ativo, mostra só os artigos dessa etapa
+  const visiveis = ETAPAS.includes(filtro) ? e.artigos.filter((a) => a.estado === filtro) : e.artigos;
+  const ocultos = e.artigos.length - visiveis.length;
   return `<div class="card ${encComAtraso(e) ? "tem-atraso" : ""}" data-id="${e.id}">
     <div class="card-head" data-enc="${e.id}">
       <div class="linha1"><span class="ref">${esc(e.numero)}${e.ref_cliente ? ` <span class="muted">· Ref. ${esc(e.ref_cliente)}</span>` : ""}</span>
@@ -175,11 +181,26 @@ function cartao(e) {
       <div class="sub">${esc(e.cliente)} · ${e.artigos.length} artigo${e.artigos.length === 1 ? "" : "s"}</div>
       <div class="chips">${chips}</div>
     </div>
-    ${e.artigos.length ? e.artigos.map(blocoArtigo).join("") : `<div class="vazio-art">Sem artigos – toque para adicionar.</div>`}
+    ${visiveis.length ? visiveis.map(blocoArtigo).join("") : `<div class="vazio-art">Sem artigos – toque para adicionar.</div>`}
+    ${ocultos ? `<button type="button" class="ocultos" data-filtro="todas">+ ${ocultos} artigo${ocultos === 1 ? "" : "s"} noutras etapas · ver todos</button>` : ""}
   </div>`;
 }
 
+function mudarFiltro(id) {
+  filtro = id; desenhar();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+// separadores do topo (Ativas, Todas, etapas, Concluída)
+$("#tabs").addEventListener("click", (ev) => {
+  const t = ev.target.closest("[data-tab]");
+  if (t) { filtro = t.dataset.tab; desenhar(); }
+});
+
 $("#lista").addEventListener("click", (ev) => {
+  const fl = ev.target.closest("[data-filtro]"); // botões de situação nos cartões
+  if (fl) return mudarFiltro(fl.dataset.filtro);
+  const rc = ev.target.closest("[data-recuar]");
+  if (rc) return recuar(rc.dataset.recuar);
   const av = ev.target.closest("[data-avancar]");
   if (av) return avancar(av.dataset.avancar);
   const art = ev.target.closest("[data-art]");
@@ -198,6 +219,18 @@ async function avancar(id) {
   const { error } = await db.from("artigos").update({ estado: ETAPAS[i] }).eq("id", id);
   if (error) return toast("Erro: " + error.message);
   toast("Passou para: " + NOMES[ETAPAS[i]]);
+  carregar();
+}
+
+// volta uma etapa atrás (ou reabre um artigo concluído para ajuste/repetição)
+async function recuar(id) {
+  const a = encomendas.flatMap((e) => e.artigos).find((x) => x.id === id);
+  let i = ETAPAS.indexOf(a.estado) - 1;
+  if (i < 0) return;
+  if (ETAPAS[i] === "estamparia" && !a.tem_estamparia) i--;
+  const { error } = await db.from("artigos").update({ estado: ETAPAS[i] }).eq("id", id);
+  if (error) return toast("Erro: " + error.message);
+  toast("Voltou para: " + NOMES[ETAPAS[i]]);
   carregar();
 }
 

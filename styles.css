@@ -147,3 +147,12 @@ dialog#modalBackup{width:min(520px,96vw)}
   .toolbar select{flex:1 1 44%;min-width:0;max-width:none}
   .tabs{padding:0 .6rem .6rem}
 }
+
+/* ===== filtros por situação ===== */
+.tabs{flex-wrap:wrap;overflow-x:visible}
+button.chip{border:0;cursor:pointer;font:inherit;font-size:12px;opacity:.9}
+button.chip:hover{opacity:1;filter:brightness(1.1)}
+button.chip.ativo{outline:2px solid #111827;outline-offset:1px}
+.ocultos{display:block;width:100%;margin-top:.5rem;background:none;border:1px dashed var(--borda);border-radius:8px;padding:.4rem;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
+.ocultos:hover{background:#f3f4f6}
+.art .rodape{display:flex;gap:.4rem;justify-content:flex-end}
