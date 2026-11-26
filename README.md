@@ -15,6 +15,14 @@ Funciona no browser do PC e do telemóvel e pode ser instalada no ecrã inicial 
 
 ---
 
+## Novidades da v4 – Amostras e stock em metros
+- Dois menus no topo: **Encomendas** (por defeito) e **Amostras**.
+- **Amostras:** referência, descrição, composição, gramagem, largura, ligamento, acabamento, cores, preço (€/m ou €/kg), stock mínimo, localização, fornecedor e notas.
+- **Stock em metros** calculado a partir de movimentos (entradas e saídas, com data e motivo). Fica a amarelo abaixo do mínimo e a vermelho sem stock. Filtro "só stock baixo".
+- **Ligação à encomenda:** no artigo há o campo **Amostra**; ao escolher a referência, preenche artigo, composição, gramagem e largura. A cor fica livre. Na ficha da amostra vê-se em que encomendas foi usada.
+- As cópias de segurança (💾) incluem amostras e movimentos; há também exportação do stock para Excel.
+- Se já tinha a v3: corra só `migracao_v4.sql` no SQL Editor (não apaga dados).
+
 ## Novidades da v3
 - Lista ordenada por **N.º de encomenda** (ordem numérica; pode alternar ↓/↑ ou ordenar pela data pedida) e **filtro por cliente**.
 - Datas de **receção da tinturaria** e **receção da estamparia** (regresso do material), além do envio para a tinturaria.
@@ -42,7 +50,7 @@ Não corra o `schema.sql`. Corra apenas `migracao_v2.sql` (uma vez) no SQL Edito
 
 1. Criar conta em https://github.com se ainda não tiver.
 2. **New repository** (botão + no canto superior direito): nome `malhas-acabadas`, **Public** (o GitHub Pages gratuito exige repositório público; os dados continuam protegidos pelo login), Create repository.
-3. **Carregar os ficheiros**: na página do repositório → **Add file → Upload files** → arrastar todos os ficheiros desta pasta (`index.html`, `styles.css`, `app.js`, `config.js`, `manifest.json`, `sw.js`, `icon.svg`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`, `schema.sql`, `migracao_v2.sql`, `migracao_v3.sql`, `README.md`) → **Commit changes**.
+3. **Carregar os ficheiros**: na página do repositório → **Add file → Upload files** → arrastar todos os ficheiros desta pasta (`index.html`, `styles.css`, `app.js`, `config.js`, `manifest.json`, `sw.js`, `icon.svg`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`, `schema.sql`, `migracao_v2.sql`, `migracao_v3.sql`, `migracao_v4.sql`, `README.md`) → **Commit changes**.
    *(Alternativa com git: `git init`, `git add .`, `git commit -m "app malhas"`, `git branch -M main`, `git remote add origin https://github.com/SEU-UTILIZADOR/malhas-acabadas.git`, `git push -u origin main`.)*
 4. **Publicar**: **Settings → Pages** → em *Build and deployment* escolher **Deploy from a branch**, branch **main**, pasta **/ (root)** → Save.
 5. Ao fim de 1–2 minutos o endereço aparece no topo da página, no formato `https://SEU-UTILIZADOR.github.io/malhas-acabadas/`.

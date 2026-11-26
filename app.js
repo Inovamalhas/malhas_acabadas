@@ -15,6 +15,9 @@ const CORES = {
 let encomendas = [];
 let filtro = "ativas";
 let atual = null;     // encomenda aberta
+let vista = "enc";    // "enc" (por defeito) ou "amo"
+let amostras = [];    // amostras com os seus movimentos de stock
+let amoAtual = null;  // amostra aberta (null = nova)
 let artAtual = null;  // artigo aberto (null = novo)
 
 const $ = (s) => document.querySelector(s);
@@ -58,10 +61,25 @@ async function carregar() {
     .map((a) => a.data_pedida_cliente).sort()[0] || "9999";
   data.sort((a, b) => prox(a).localeCompare(prox(b)));
   encomendas = data;
+  await carregarAmostras();
   if (atual) atual = encomendas.find((e) => e.id === atual.id) || atual;
   desenhar();
+  desenharAmostras();
   refrescarModal();
+  atualizarModalAmo();
 }
+
+async function carregarAmostras() {
+  const { data, error } = await db.from("amostras").select("*, amostra_movimentos(metros)").order("referencia");
+  if (error) {
+    amostras = [];
+    toast("Amostras: " + error.message + " (já correu o migracao_v4.sql no Supabase?)");
+    return;
+  }
+  amostras = data;
+}
+const stockDe = (am) => (am.amostra_movimentos || []).reduce((s, m) => s + Number(m.metros), 0);
+const refAmostra = (a) => (amostras.find((x) => x.id === a.amostra_id) || {}).referencia;
 
 const idx = (a) => ETAPAS.indexOf(a.estado);
 // a partir de que posição da etapa cada data já está "cumprida"
@@ -108,7 +126,7 @@ function desenhar() {
     if (!fTab(e)) return false;
     if (so && !encComAtraso(e)) return false;
     if (!q) return true;
-    const txt = [e.numero, e.ref_cliente, e.cliente, ...e.artigos.flatMap((a) => [a.descricao, a.cor, a.malharia, a.tinturaria, a.estamparia])];
+    const txt = [e.numero, e.ref_cliente, e.cliente, ...e.artigos.flatMap((a) => [a.descricao, a.cor, a.malharia, a.tinturaria, a.estamparia, a.composicao, refAmostra(a)])];
     return txt.some((v) => (v || "").toLowerCase().includes(q));
   });
   const ord = $("#ordem").value;
@@ -141,7 +159,8 @@ function ondeEsta(a) {
 }
 
 function blocoArtigo(a) {
-  const detalhe = [a.cor, a.quantidade_kg ? a.quantidade_kg + " kg" : ""].filter(Boolean).map(esc).join(" · ");
+  const detalhe = [a.cor, a.quantidade_kg ? a.quantidade_kg + " kg" : "", a.gramagem ? a.gramagem + " g/m²" : "",
+    refAmostra(a) ? "Amostra " + refAmostra(a) : ""].filter(Boolean).map(esc).join(" · ");
   return `<div class="art estado-${a.estado}" data-art="${a.id}">
     <div class="linha1"><span class="art-nome">${esc(a.descricao)}${detalhe ? ` <span class="muted">· ${detalhe}</span>` : ""}</span>
       <span class="badge">${NOMES[a.estado]}</span></div>
@@ -255,7 +274,7 @@ function abrirEnc(e) {
   if (!$("#modal").open) $("#modal").showModal();
   if (e) { $("#guiaForm").data.value = hoje(); refrescarModal(); carregarGuias(); }
 }
-$("#btnNova").onclick = () => abrirEnc(null);
+$("#btnNova").onclick = () => (vista === "amo" ? abrirAmo(null) : abrirEnc(null));
 $("#btnFechar").onclick = () => $("#modal").close();
 
 formEnc.addEventListener("submit", async (ev) => {
@@ -311,7 +330,24 @@ function ajustarCampos() {
 formArt.origem_malha.addEventListener("change", ajustarCampos);
 formArt.tem_estamparia.addEventListener("change", ajustarCampos);
 
-const CAMPOS_ART = ["descricao", "cor", "quantidade_kg", "data_pedida_cliente", "estado", "origem_malha", "malharia",
+// Ao escolher uma amostra, copia as características para o artigo (a cor fica livre, para o cliente)
+formArt.amostra_id.addEventListener("change", () => {
+  const am = amostras.find((x) => x.id === formArt.amostra_id.value);
+  if (!am) return;
+  formArt.descricao.value = am.descricao;
+  formArt.composicao.value = am.composicao ?? "";
+  formArt.gramagem.value = am.gramagem ?? "";
+  formArt.largura_cm.value = am.largura_cm ?? "";
+  toast("Características preenchidas a partir da amostra " + am.referencia);
+});
+function preencherSelectAmostras(idAtual) {
+  const opcoes = amostras.filter((a) => a.ativa || a.id === idAtual)
+    .sort((a, b) => a.referencia.localeCompare(b.referencia, "pt", { numeric: true }));
+  formArt.amostra_id.innerHTML = `<option value="">— sem amostra —</option>` +
+    opcoes.map((a) => `<option value="${a.id}">${esc(a.referencia)} · ${esc(a.descricao)} (stock ${numPT(stockDe(a))} m)</option>`).join("");
+}
+
+const CAMPOS_ART = ["amostra_id", "composicao", "gramagem", "largura_cm", "descricao", "cor", "quantidade_kg", "data_pedida_cliente", "estado", "origem_malha", "malharia",
   "data_prev_fim_malha", "tinturaria", "data_prev_envio_tinturaria", "data_prev_rececao_tinturaria",
   "estamparia", "data_prev_rececao_estamparia", "data_prev_entrega_cliente", "notas"];
 
@@ -320,6 +356,7 @@ function abrirArt(a) {
   formArt.reset();
   $("#artErro").textContent = "";
   $("#artTitulo").textContent = a ? "Artigo – " + a.descricao : "Novo artigo" + (atual ? " · enc. " + atual.numero : "");
+  preencherSelectAmostras(a ? a.amostra_id : null);
   if (a) {
     CAMPOS_ART.forEach((c) => formArt[c].value = a[c] ?? "");
     formArt.tem_estamparia.checked = !!a.tem_estamparia;
@@ -337,7 +374,7 @@ formArt.addEventListener("submit", async (ev) => {
   ev.preventDefault();
   const dados = {};
   CAMPOS_ART.forEach((c) => { const v = formArt[c].value; dados[c] = v === "" ? null : v; });
-  dados.quantidade_kg = dados.quantidade_kg === null ? null : Number(dados.quantidade_kg);
+  ["quantidade_kg", "gramagem", "largura_cm"].forEach((c) => { dados[c] = dados[c] === null ? null : Number(dados[c]); });
   dados.tem_estamparia = formArt.tem_estamparia.checked;
   if (dados.origem_malha !== "subcontratada") dados.malharia = null;
   if (!dados.tem_estamparia) { dados.estamparia = null; dados.data_prev_rececao_estamparia = null; }
@@ -408,6 +445,173 @@ async function atualizarEstadoPorGuia(artigoId, destino) {
   await carregar();
 }
 
+/* ---------- Menu (Encomendas / Amostras) ---------- */
+function mudarVista(v) {
+  vista = v;
+  $("#vEnc").classList.toggle("hidden", v !== "enc");
+  $("#vAmo").classList.toggle("hidden", v !== "amo");
+  document.querySelectorAll("[data-vista]").forEach((b) => b.classList.toggle("ativo", b.dataset.vista === v));
+  $("#btnNova").innerHTML = '+ Nova<span class="so-pc"> ' + (v === "enc" ? "encomenda" : "amostra") + "</span>";
+  if (v === "amo") desenharAmostras();
+  window.scrollTo({ top: 0 });
+}
+document.querySelectorAll("[data-vista]").forEach((b) => b.onclick = () => mudarVista(b.dataset.vista));
+
+/* ---------- Amostras ---------- */
+const numPT = (n, d = 2) => Number(n).toLocaleString("pt-PT", { maximumFractionDigits: d });
+const porRef = (a, b) => a.referencia.localeCompare(b.referencia, "pt", { numeric: true });
+
+function estadoStock(am) {
+  const s = stockDe(am);
+  if (s <= 0) return "zero";
+  if (am.stock_minimo_m != null && s <= Number(am.stock_minimo_m)) return "baixo";
+  return "ok";
+}
+const usosDe = (am) => encomendas.flatMap((e) => e.artigos.filter((a) => a.amostra_id === am.id).map((a) => ({ e, a })));
+
+function desenharAmostras() {
+  const ativas = amostras.filter((a) => a.ativa);
+  $("#nAmostras").textContent = amostras.length ? `(${ativas.length})` : "";
+  const q = $("#pesqAmo").value.trim().toLowerCase();
+  const baixo = $("#soBaixo").checked, inat = $("#verInativas").checked;
+  const lista = amostras.filter((am) => {
+    if (!am.ativa && !inat) return false;
+    if (baixo && estadoStock(am) === "ok") return false;
+    if (!q) return true;
+    return [am.referencia, am.descricao, am.composicao, am.ligamento, am.acabamento, am.cores, am.fornecedor, am.localizacao]
+      .some((v) => (v || "").toLowerCase().includes(q));
+  }).sort(porRef);
+  const nBaixo = ativas.filter((a) => estadoStock(a) === "baixo").length;
+  const nZero = ativas.filter((a) => estadoStock(a) === "zero").length;
+  const total = ativas.reduce((s, a) => s + Math.max(0, stockDe(a)), 0);
+  $("#resumoAmo").innerHTML = `<span><b>${ativas.length}</b> referências ativas</span>
+    <span class="s-baixo"><b>${nBaixo}</b> com stock baixo</span><span class="s-zero"><b>${nZero}</b> sem stock</span>
+    <span><b>${numPT(total, 1)} m</b> em stock</span>`;
+  $("#listaAmo").innerHTML = lista.length ? lista.map(cartaoAmo).join("")
+    : `<div class="vazio">${amostras.length ? "Nenhuma amostra com estes filtros." : "Ainda não há amostras. Toque em “+ Nova amostra”."}</div>`;
+}
+
+function cartaoAmo(am) {
+  const st = estadoStock(am), s = stockDe(am), usos = usosDe(am).length;
+  const carac = [am.composicao, am.gramagem ? `${numPT(am.gramagem, 1)} g/m²` : "", am.largura_cm ? `${numPT(am.largura_cm, 1)} cm` : "",
+    am.ligamento, am.acabamento].filter(Boolean);
+  return `<div class="card amo ${am.ativa ? "" : "inativa"}" data-amo="${am.id}">
+    <div class="linha1"><span class="ref">${esc(am.referencia)}</span><span class="stock s-${st}">${numPT(s)} m</span></div>
+    <div class="sub">${esc(am.descricao)}${am.ativa ? "" : " · inativa"}</div>
+    ${carac.length ? `<div class="carac">${carac.map((c) => `<span>${esc(c)}</span>`).join("")}</div>` : ""}
+    <div class="amo-info">
+      ${am.preco != null ? `<span>💶 ${numPT(am.preco)} €/${am.preco_unidade}</span>` : ""}
+      ${am.localizacao ? `<span>📍 ${esc(am.localizacao)}</span>` : ""}
+      ${am.cores ? `<span>🎨 ${esc(am.cores)}</span>` : ""}
+      ${usos ? `<span>📦 ${usos} artigo${usos === 1 ? "" : "s"} em encomendas</span>` : ""}
+    </div>
+    ${st !== "ok" ? `<div class="aviso-stock s-${st}">${st === "zero" ? "Sem stock" : `Stock baixo (mínimo ${numPT(am.stock_minimo_m)} m)`}</div>` : ""}
+  </div>`;
+}
+
+$("#pesqAmo").addEventListener("input", desenharAmostras);
+$("#soBaixo").addEventListener("change", desenharAmostras);
+$("#verInativas").addEventListener("change", desenharAmostras);
+$("#listaAmo").addEventListener("click", (ev) => {
+  const c = ev.target.closest("[data-amo]");
+  if (c) abrirAmo(amostras.find((x) => x.id === c.dataset.amo));
+});
+
+/* ficha da amostra */
+const formAmo = $("#formAmo");
+const CAMPOS_AMO = ["referencia", "descricao", "composicao", "gramagem", "largura_cm", "ligamento", "acabamento", "cores",
+  "preco", "preco_unidade", "stock_minimo_m", "localizacao", "fornecedor", "notas"];
+const NUM_AMO = ["gramagem", "largura_cm", "preco", "stock_minimo_m"];
+
+function abrirAmo(am) {
+  amoAtual = am || null;
+  formAmo.reset();
+  $("#amoErro").textContent = "";
+  $("#amoTitulo").textContent = am ? "Amostra " + am.referencia : "Nova amostra";
+  if (am) { CAMPOS_AMO.forEach((c) => formAmo[c].value = am[c] ?? ""); formAmo.ativa.checked = !!am.ativa; }
+  else formAmo.ativa.checked = true;
+  $("#btnApagarAmo").classList.toggle("hidden", !am);
+  $("#stockBox").classList.toggle("hidden", !am);
+  $("#usoBox").classList.toggle("hidden", !am);
+  if (!$("#modalAmo").open) $("#modalAmo").showModal();
+  if (am) { $("#movForm").data.value = hoje(); atualizarModalAmo(); carregarMovimentos(); }
+}
+$("#btnFecharAmo").onclick = () => $("#modalAmo").close();
+
+formAmo.addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const dados = {};
+  CAMPOS_AMO.forEach((c) => { const v = formAmo[c].value.trim(); dados[c] = v === "" ? null : v; });
+  NUM_AMO.forEach((c) => { if (dados[c] !== null) dados[c] = Number(dados[c]); });
+  dados.ativa = formAmo.ativa.checked;
+  $("#btnGuardarAmo").disabled = true;
+  const novo = !amoAtual;
+  const q = novo ? db.from("amostras").insert(dados).select().single()
+                 : db.from("amostras").update(dados).eq("id", amoAtual.id).select().single();
+  const { data, error } = await q;
+  $("#btnGuardarAmo").disabled = false;
+  if (error) { $("#amoErro").textContent = error.code === "23505" ? "Já existe uma amostra com esta referência." : error.message; return; }
+  toast("Amostra guardada");
+  amoAtual = data;
+  await carregar();
+  amoAtual = amostras.find((x) => x.id === data.id) || data;
+  if (novo) abrirAmo(amoAtual); // fica aberta para registar o stock inicial
+  else $("#modalAmo").close();
+});
+
+$("#btnApagarAmo").onclick = async () => {
+  if (!amoAtual) return;
+  const n = usosDe(amoAtual).length;
+  if (!confirm(`Apagar a amostra ${amoAtual.referencia} e todo o seu histórico de stock?` +
+      (n ? `\n\nEstá ligada a ${n} artigo(s) de encomendas; as encomendas mantêm-se, só perdem a ligação à amostra.` : ""))) return;
+  const { error } = await db.from("amostras").delete().eq("id", amoAtual.id);
+  if (error) return toast("Erro: " + error.message);
+  amoAtual = null; $("#modalAmo").close(); toast("Amostra apagada"); carregar();
+};
+
+function atualizarModalAmo() {
+  if (!amoAtual || !$("#modalAmo").open) return;
+  amoAtual = amostras.find((x) => x.id === amoAtual.id) || amoAtual;
+  $("#stockAtual").innerHTML = `<span class="stock s-${estadoStock(amoAtual)}">${numPT(stockDe(amoAtual))} m</span>`;
+  const usos = usosDe(amoAtual);
+  $("#usoLista").innerHTML = usos.length
+    ? usos.map(({ e, a }) => `<div class="guia"><span><b>${esc(e.numero)}</b> · ${esc(e.cliente)} · ${esc(a.descricao)}${a.cor ? " · " + esc(a.cor) : ""} · <span class="muted">${NOMES[a.estado]}</span></span></div>`).join("")
+    : `<p class="muted">Ainda não foi usada em nenhuma encomenda.</p>`;
+}
+
+/* movimentos de stock (metros) */
+async function carregarMovimentos() {
+  const { data, error } = await db.from("amostra_movimentos").select("*").eq("amostra_id", amoAtual.id)
+    .order("data", { ascending: false }).order("criado_em", { ascending: false });
+  if (error) { $("#movLista").textContent = error.message; return; }
+  $("#movLista").innerHTML = data.length ? data.map((m) => `
+    <div class="guia mov ${m.metros >= 0 ? "entrada" : "saida"}">
+      <span><b>${m.metros >= 0 ? "＋" : "－"}${numPT(Math.abs(m.metros))} m</b> · ${m.data.split("-").reverse().join("/")}${m.motivo ? " · " + esc(m.motivo) : ""}${m.notas ? " · " + esc(m.notas) : ""}</span>
+      <button class="btn small danger" data-mdel="${m.id}">✕</button>
+    </div>`).join("") : `<p class="muted">Ainda sem movimentos. Registe abaixo o stock inicial.</p>`;
+  if (!data.length) $("#movForm").motivo.value = "Stock inicial";
+  document.querySelectorAll("[data-mdel]").forEach((b) => b.onclick = async () => {
+    if (!confirm("Apagar este movimento? O stock será recalculado.")) return;
+    const { error: e2 } = await db.from("amostra_movimentos").delete().eq("id", b.dataset.mdel);
+    if (e2) return toast("Erro: " + e2.message);
+    await carregar(); carregarMovimentos();
+  });
+}
+$("#movForm").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const f = ev.target, m = Number(f.metros.value), sinal = Number(f.sinal.value);
+  if (!(m > 0)) return;
+  if (sinal < 0 && m > stockDe(amoAtual) &&
+      !confirm(`A saída (${numPT(m)} m) é superior ao stock atual (${numPT(stockDe(amoAtual))} m). Registar mesmo assim?`)) return;
+  const { error } = await db.from("amostra_movimentos").insert({
+    amostra_id: amoAtual.id, data: f.data.value, metros: sinal * m, motivo: f.motivo.value.trim() || null
+  });
+  if (error) return toast("Erro: " + error.message);
+  f.metros.value = ""; f.motivo.value = "";
+  toast(sinal > 0 ? "Entrada registada" : "Saída registada");
+  await carregar(); carregarMovimentos();
+});
+
 /* ---------- Cópia de segurança ---------- */
 $("#btnBackup").onclick = () => $("#modalBackup").showModal();
 $("#btnFecharBackup").onclick = () => $("#modalBackup").close();
@@ -422,7 +626,7 @@ const carimbo = () => new Date().toISOString().slice(0, 16).replace(/[-:T]/g, ""
 
 async function lerTudo() {
   const out = {};
-  for (const t of ["encomendas", "artigos", "guias"]) {
+  for (const t of ["amostras", "amostra_movimentos", "encomendas", "artigos", "guias"]) {
     let todos = [], de = 0;
     for (;;) { // o Supabase devolve no máximo 1000 linhas por pedido
       const { data, error } = await db.from(t).select("*").order("id").range(de, de + 999);
@@ -440,21 +644,33 @@ $("#btnExportJson").onclick = async () => {
   try {
     const d = await lerTudo();
     descarregar(`malhas_copia_${carimbo()}.json`,
-      JSON.stringify({ app: "malhas-acabadas", versao: 2, criado_em: new Date().toISOString(), ...d }, null, 1), "application/json");
-    toast(`Cópia guardada: ${d.encomendas.length} encomendas, ${d.artigos.length} artigos, ${d.guias.length} guias`);
+      JSON.stringify({ app: "malhas-acabadas", versao: 3, criado_em: new Date().toISOString(), ...d }, null, 1), "application/json");
+    toast(`Cópia guardada: ${d.encomendas.length} encomendas, ${d.artigos.length} artigos, ${d.guias.length} guias, ${d.amostras.length} amostras`);
   } catch (e) { toast("Erro: " + e.message); }
 };
 
 $("#btnExportCsv").onclick = () => {
-  const cab = ["N.º Encomenda", "Ref. Cliente", "Cliente", "Artigo", "Cor", "Kg", "Estado", "Origem malha", "Malharia", "Tinturaria",
+  const cab = ["N.º Encomenda", "Ref. Cliente", "Cliente", "Artigo", "Cor", "Amostra", "Composição", "Gramagem (g/m²)", "Largura (cm)", "Kg", "Estado", "Origem malha", "Malharia", "Tinturaria",
     "Estamparia", "Data pedida cliente", "Fim malha", "Envio tinturaria", "Receção tinturaria", "Receção estamparia", "Entrega", "Notas"];
   const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const linhas = [cab.map(q).join(";")];
   encomendas.forEach((e) => e.artigos.forEach((a) => linhas.push([
-    e.numero, e.ref_cliente, e.cliente, a.descricao, a.cor, a.quantidade_kg, NOMES[a.estado], a.origem_malha, a.malharia, a.tinturaria,
+    e.numero, e.ref_cliente, e.cliente, a.descricao, a.cor, refAmostra(a), a.composicao, a.gramagem, a.largura_cm, a.quantidade_kg, NOMES[a.estado], a.origem_malha, a.malharia, a.tinturaria,
     a.estamparia, a.data_pedida_cliente, a.data_prev_fim_malha, a.data_prev_envio_tinturaria, a.data_prev_rececao_tinturaria,
     a.data_prev_rececao_estamparia, a.data_prev_entrega_cliente, a.notas].map(q).join(";"))));
   descarregar(`malhas_${carimbo()}.csv`, "﻿" + linhas.join("\r\n"), "text/csv;charset=utf-8");
+};
+
+// stock de amostras para Excel: uma linha por referência
+$("#btnExportCsvAmo").onclick = () => {
+  const cab = ["Referência", "Descrição", "Composição", "Gramagem (g/m²)", "Largura (cm)", "Ligamento", "Acabamento", "Cores", "Preço",
+    "Unidade", "Stock (m)", "Stock mínimo (m)", "Localização", "Fornecedor", "Ativa", "Notas"];
+  const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const linhas = [cab.map(q).join(";")];
+  [...amostras].sort(porRef).forEach((a) => linhas.push([a.referencia, a.descricao, a.composicao, a.gramagem, a.largura_cm, a.ligamento,
+    a.acabamento, a.cores, a.preco, "€/" + a.preco_unidade, stockDe(a), a.stock_minimo_m, a.localizacao, a.fornecedor, a.ativa ? "Sim" : "Não", a.notas]
+    .map(q).join(";")));
+  descarregar(`amostras_stock_${carimbo()}.csv`, "﻿" + linhas.join("\r\n"), "text/csv;charset=utf-8");
 };
 
 $("#ficheiroRestaurar").addEventListener("change", async (ev) => {
@@ -463,16 +679,22 @@ $("#ficheiroRestaurar").addEventListener("change", async (ev) => {
   let d;
   try { d = JSON.parse(await f.text()); } catch { return toast("Ficheiro inválido."); }
   if (!Array.isArray(d.encomendas) || !Array.isArray(d.artigos) || !Array.isArray(d.guias)) return toast("Este ficheiro não é uma cópia desta app.");
+  d.amostras = Array.isArray(d.amostras) ? d.amostras : [];                       // cópias antigas não têm amostras
+  d.amostra_movimentos = Array.isArray(d.amostra_movimentos) ? d.amostra_movimentos : [];
   const subst = $("#restSubstituir").checked;
-  const resumo = `${d.encomendas.length} encomendas, ${d.artigos.length} artigos e ${d.guias.length} guias`;
+  const resumo = `${d.encomendas.length} encomendas, ${d.artigos.length} artigos, ${d.guias.length} guias e ${d.amostras.length} amostras`;
   if (!confirm(`Repor ${resumo}?` + (subst ? "\n\nATENÇÃO: tudo o que existe agora será apagado primeiro." : "\n\nRegistos com o mesmo ID serão substituídos pelos da cópia."))) return;
   const limpa = (r) => { const { criado_por, ...resto } = r; return resto; };
   try {
     if (subst) { // apagar encomendas apaga também artigos e guias (cascade)
       const { error } = await db.from("encomendas").delete().neq("id", "00000000-0000-0000-0000-000000000000");
       if (error) throw new Error("apagar: " + error.message);
+      const e2 = (await db.from("amostras").delete().neq("id", "00000000-0000-0000-0000-000000000000")).error; // cascade: movimentos
+      if (e2) throw new Error("apagar amostras: " + e2.message);
     }
-    for (const [t, rows] of [["encomendas", d.encomendas], ["artigos", d.artigos], ["guias", d.guias]]) {
+    // a ordem importa: as amostras têm de existir antes dos artigos que as referem
+    for (const [t, rows] of [["amostras", d.amostras], ["amostra_movimentos", d.amostra_movimentos],
+        ["encomendas", d.encomendas], ["artigos", d.artigos], ["guias", d.guias]]) {
       for (let i = 0; i < rows.length; i += 200) {
         const { error } = await db.from(t).upsert(rows.slice(i, i + 200).map(limpa), { onConflict: "id" });
         if (error) throw new Error(t + ": " + error.message);
